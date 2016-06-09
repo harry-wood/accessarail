@@ -1,0 +1,162 @@
+<html>
+<head>
+<title>Accessarail</title>
+  <link rel="stylesheet" type=text/css href="./main.css">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
+  <script src="http://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+ 
+  <script>
+
+var gettingpos;
+var lat;
+var lon;
+var map;
+var resultsLayer;
+
+function init() {
+  $('#message').html("");
+  $('#journeyform').show();
+}
+
+function journeyFormSubmit() {
+  var fromText = $('#txtFrom').val();
+  var toText = $('#txtTo').val();
+  
+/*
+  var fromLat = 0; //TOOD GEOCODE! Ajax call
+  var fromLon = 0;
+  var toLat = 0; //TODO GEOCODE!
+  var toLon = 0;
+  journeyPlan("lonlat:" + fromLon + "," + fromLat,
+              "lonlat:" + toLon + "," + toLat ); 
+ */
+  journeyPlan(fromText, toText);
+}
+
+
+function journeyPlan(fromParam, toParam) {
+  
+  console.log('journeyPlan');
+  
+  var url = "http://fcc.transportapi.com/v3/uk/" +  //http://transportapi.com/v3/uk/" +
+            "public/journey/from/" + fromParam +
+            "/to/" + toParam + 
+            ".json?" +
+            "region=southeast";
+            
+  console.log('Calling url:' + url);
+  $("#results").show();
+  $("#results").html("Calling journey planner...<br><img src='https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif'>");
+  var p = this;
+  
+  $.ajax({
+       url : url,
+       dataType : 'jsonp',
+       timeout : 60000
+     })
+     .fail(function() {
+       console.log('transportAPIcall FAIL. URL:' + url);
+       $("#results").html("Journey plan error");
+     })
+     .done(function(data) {
+     
+       console.log("data:");
+       console.log(data);
+       
+       var from_coord = [0,0];
+       var last_coord = [0,0];
+      
+       //Loop through the routes and route parts and add polylines to the map 
+       var routes = data['routes'];
+       
+       p.displayRoutesResult(routes);
+       
+       
+       $('#gobtn').show();
+     });
+   
+}
+
+function displayRoutesResult(routes) {
+  
+  if (routes && routes.length>0) {
+    var results = routes.length + " alternative routes";
+    
+    for (var rno=0; rno<routes.length; rno++) {
+      var route = routes[rno];
+      var routeParts = route['route_parts'];
+      
+      results += "<li class='alternative'>";      
+      for (var rpno=0; rpno<routeParts.length; rpno++) {
+        var routeLinesGeoJSON = [ ];
+        var routePart       = routeParts[rpno];
+        var mode            = routePart['mode'];
+        var departure_time  = routePart['departure_time'];
+        var arrival_time    = routePart['arrival_time'];
+        var from_point_name = routePart['from_point_name'];
+        var to_point_name   = routePart['to_point_name'];
+        var destination     = routePart['destination'];
+        var coordinates     = routePart['coordinates'];
+    
+        //Choose line colour
+        var colour = "YELLOW";
+        if (mode=="foot") colour = "LIME";
+        if (mode=="tube") colour = "BLACK";
+        if (mode=="dlr") colour = "BLACK";
+        if (mode=="bus") colour = "RED"; 
+        if (mode=="train") colour = "PURPLE"; 
+        if (mode=="tram") colour = "GREEN"; 
+        if (mode=="overground") colour = "ORANGE";
+        if (mode=="taxi") colour = "DARKGREY";
+    
+        if (coordinates!=null && coordinates.length > 0) {
+          //TODO: put coordinates on a map?
+        }
+       
+        if (mode=="train") { 
+          results += " <div class='routePartMode' style='color:" + colour + ";'>" + mode + " to " + to_point_name + " (" + departure_time + " to " + destination + ")</div>";
+        } else {
+          results += " <div class='routePartMode' style='color:" + colour + ";'>" + mode + " to " + to_point_name + "</div>";
+        }
+      } //next rpno
+    } //next rno
+    
+    $("#results").html(results);
+    
+  } else {
+    //TODO: handle an 'identification' response
+    $('#results').text("No routes found");
+  }
+
+}
+
+</script>
+  
+</head>
+<body onLoad="init();">
+  <h1 id="bigtitle">Accessarail</h1>
+  
+  <div id="leftpanel">
+    <div id="message">message</div>
+    <form id="journeyform" onSubmit="journeyFormSubmit(); return false;">
+      From: <input type="text" id="txtFrom" value="lonlat:-0.1128,51.5028"><br>
+      To: <input type="text" id="txtTo" value="lonlat:0.28153,50.76957"><br>
+      <input type="submit" id="gobtn" value="Go!" />
+    </form>
+    <div id="results"></div>
+  </div>
+
+  <div id="transportapi-credit">
+  Journey planning by<br>
+  <a href="http://www.transportapi.com" title="TransportAPI - Powering change and innovation in transport"><img src="http://transportapi.com/transportapi-logo-100px.png" border="0"></a>
+  </div>
+  
+  <div id="github-link">
+    <div style="width:26px; height:26px; float:left;"> </div>
+    <a href="https://github.com/harry-wood/get-me-to-bournemouth">More information<br>&amp; code on github</a>
+  </div>
+</div>
+
+</body>
+</html>
